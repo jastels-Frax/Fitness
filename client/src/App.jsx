@@ -1,8 +1,5 @@
 import { Routes, Route } from 'react-router-dom';
-
-function Home() {
-  return <h1>PUSH</h1>;
-}
+import Home from './pages/Home';
 
 export default function App() {
   return (
