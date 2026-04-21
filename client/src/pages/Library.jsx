@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ExerciseCard from '../components/ExerciseCard';
 import { MUSCLE_GROUPS } from '../constants';
+import { getExercises } from '../api';
 
 export default function Library() {
   const navigate = useNavigate();
@@ -11,11 +12,7 @@ export default function Library() {
   const [activeGroup, setActiveGroup] = useState('All');
 
   useEffect(() => {
-    fetch('/api/exercises')
-      .then((r) => {
-        if (!r.ok) throw new Error('Failed to load exercises');
-        return r.json();
-      })
+    getExercises()
       .then(setExercises)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));

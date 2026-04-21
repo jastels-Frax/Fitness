@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { MUSCLE_COLOR } from '../constants';
+import { getSession, deleteSession } from '../api';
 
 function fmtDate(str) {
   if (!str) return '—';
@@ -27,8 +28,7 @@ export default function SessionCard({ session, onDelete }) {
     if (!expanded && !detail) {
       setLoadingDetail(true);
       try {
-        const res = await fetch(`/api/sessions/${session.id}`);
-        setDetail(await res.json());
+        setDetail(await getSession(session.id));
       } finally {
         setLoadingDetail(false);
       }
@@ -39,7 +39,7 @@ export default function SessionCard({ session, onDelete }) {
   const handleDelete = async () => {
     if (!confirmDelete) { setConfirmDelete(true); return; }
     setDeleting(true);
-    await fetch(`/api/sessions/${session.id}`, { method: 'DELETE' });
+    await deleteSession(session.id);
     onDelete(session.id);
   };
 

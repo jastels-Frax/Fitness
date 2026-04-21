@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SessionCard from '../components/SessionCard';
+import { getSessions } from '../api';
 
 export default function History() {
   const navigate = useNavigate();
@@ -9,11 +10,7 @@ export default function History() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch('/api/sessions')
-      .then((r) => {
-        if (!r.ok) throw new Error('Failed to load history');
-        return r.json();
-      })
+    getSessions()
       .then(setSessions)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));

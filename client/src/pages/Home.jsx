@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TemplateCard from '../components/TemplateCard';
 import useWorkoutStore from '../store/workoutStore';
+import { getTemplates, getTemplate } from '../api';
 
 
 export default function Home() {
@@ -13,11 +14,7 @@ export default function Home() {
   const [starting, setStarting] = useState(null);
 
   useEffect(() => {
-    fetch('/api/templates')
-      .then((r) => {
-        if (!r.ok) throw new Error('Failed to load templates');
-        return r.json();
-      })
+    getTemplates()
       .then(setTemplates)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
@@ -26,8 +23,7 @@ export default function Home() {
   const handleSelect = async (templateId) => {
     setStarting(templateId);
     try {
-      const res = await fetch(`/api/templates/${templateId}`);
-      const data = await res.json();
+      const data = await getTemplate(templateId);
       startSession(data, data.exercises);
       navigate('/workout/active');
     } catch {

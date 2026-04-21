@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { MUSCLE_COLOR, DIFFICULTY_COLOR } from '../constants';
+import { getExercise } from '../api';
 
 export default function ExerciseDetail() {
   const { id } = useParams();
@@ -10,11 +11,7 @@ export default function ExerciseDetail() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch(`/api/exercises/${id}`)
-      .then((r) => {
-        if (!r.ok) throw new Error('Exercise not found');
-        return r.json();
-      })
+    getExercise(id)
       .then(setExercise)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));

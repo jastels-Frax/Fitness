@@ -4,6 +4,7 @@ import {
   ResponsiveContainer, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts';
+import { getExercises, getExerciseMetrics, getOverviewMetrics } from '../api';
 
 const TABS = ['Exercise', 'Overview'];
 
@@ -36,27 +37,24 @@ export default function Metrics() {
   const [overview, setOverview] = useState(null);
 
   useEffect(() => {
-    fetch('/api/exercises')
-      .then((r) => r.json())
-      .then((data) => {
-        setExercises(data);
-        if (data.length) setSelectedId(String(data[0].id));
-      });
+    getExercises().then((data) => {
+      setExercises(data);
+      if (data.length) setSelectedId(String(data[0].id));
+    });
   }, []);
 
   useEffect(() => {
     if (!selectedId || tab !== 'Exercise') return;
     setLoadingEx(true);
     setExData(null);
-    fetch(`/api/metrics/exercise/${selectedId}`)
-      .then((r) => r.json())
+    getExerciseMetrics(selectedId)
       .then(setExData)
       .finally(() => setLoadingEx(false));
   }, [selectedId, tab]);
 
   useEffect(() => {
     if (tab !== 'Overview' || overview) return;
-    fetch('/api/metrics/overview').then((r) => r.json()).then(setOverview);
+    getOverviewMetrics().then(setOverview);
   }, [tab, overview]);
 
   const chartData = (exData?.history ?? []).map((h) => ({

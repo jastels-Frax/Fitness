@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import useSettingsStore from '../store/settingsStore';
+import { deleteAllSessions } from '../api';
 
 export default function Settings() {
   const { unit, setUnit } = useSettingsStore();
@@ -13,7 +14,7 @@ export default function Settings() {
       return;
     }
     setClearing(true);
-    await fetch('/api/sessions/all', { method: 'DELETE' });
+    await deleteAllSessions();
     setClearing(false);
     setConfirmClear(false);
     setCleared(true);
