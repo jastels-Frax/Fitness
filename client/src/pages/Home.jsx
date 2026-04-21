@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TemplateCard from '../components/TemplateCard';
+import useWorkoutStore from '../store/workoutStore';
 
 export default function Home() {
   const navigate = useNavigate();
+  const startSession = useWorkoutStore((s) => s.startSession);
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [starting, setStarting] = useState(null);
 
   useEffect(() => {
     fetch('/api/templates')
@@ -18,6 +21,18 @@ export default function Home() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
+
+  const handleSelect = async (templateId) => {
+    setStarting(templateId);
+    try {
+      const res = await fetch(`/api/templates/${templateId}`);
+      const data = await res.json();
+      startSession(data, data.exercises);
+      navigate('/workout/active');
+    } catch {
+      setStarting(null);
+    }
+  };
 
   return (
     <div style={styles.page}>
@@ -31,18 +46,21 @@ export default function Home() {
         <p style={styles.subtitle}>Choose your session</p>
       </header>
 
-      {loading && (
-        <p style={styles.state}>Loading…</p>
-      )}
-
-      {error && (
-        <p style={{ ...styles.state, color: 'var(--dot-core)' }}>{error}</p>
-      )}
+      {loading && <p style={styles.state}>Loading…</p>}
+      {error   && <p style={{ ...styles.state, color: 'var(--dot-core)' }}>{error}</p>}
 
       {!loading && !error && (
         <div style={styles.grid}>
           {templates.map((t) => (
-            <TemplateCard key={t.id} template={t} />
+            <div
+              key={t.id}
+              style={{ opacity: starting && starting !== t.id ? 0.4 : 1, transition: 'opacity 0.2s' }}
+            >
+              <TemplateCard
+                template={t}
+                onClick={() => handleSelect(t.id)}
+              />
+            </div>
           ))}
         </div>
       )}
@@ -57,9 +75,7 @@ const styles = {
     maxWidth: 960,
     margin: '0 auto',
   },
-  header: {
-    marginBottom: 48,
-  },
+  header: { marginBottom: 48 },
   headerRow: {
     display: 'flex',
     alignItems: 'flex-end',

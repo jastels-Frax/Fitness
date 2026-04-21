@@ -37,6 +37,35 @@ app.get('/api/exercises/:id', (req, res) => {
   });
 });
 
+app.get('/api/templates/:id', (req, res) => {
+  const tmpl = db.prepare('SELECT * FROM workout_templates WHERE id = ?').get(req.params.id);
+  if (!tmpl) return res.status(404).json({ error: 'Not found' });
+
+  const exerciseIds = JSON.parse(tmpl.exercise_ids);
+  const placeholders = exerciseIds.map(() => '?').join(',');
+  const exerciseMap = {};
+  db.prepare(`SELECT * FROM exercises WHERE id IN (${placeholders})`)
+    .all(...exerciseIds)
+    .forEach((e) => {
+      exerciseMap[e.id] = {
+        ...e,
+        form_cues:       JSON.parse(e.form_cues),
+        common_mistakes: JSON.parse(e.common_mistakes),
+        rep_ranges:      JSON.parse(e.rep_ranges),
+      };
+    });
+
+  res.json({ ...tmpl, exercises: exerciseIds.map((id) => exerciseMap[id]).filter(Boolean) });
+});
+
+app.post('/api/sessions', (req, res) => {
+  const { template_id, notes } = req.body;
+  const result = db
+    .prepare('INSERT INTO sessions (template_id, notes, completed_at) VALUES (?, ?, ?)')
+    .run(template_id ?? null, notes ?? null, new Date().toISOString());
+  res.json({ id: result.lastInsertRowid });
+});
+
 app.get('/api/templates', (req, res) => {
   const templates = db.prepare('SELECT * FROM workout_templates ORDER BY id').all();
 

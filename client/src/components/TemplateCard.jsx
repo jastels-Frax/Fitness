@@ -7,11 +7,11 @@ const DOT_COLOR = {
   Core:      'var(--dot-core)',
 };
 
-export default function TemplateCard({ template }) {
+export default function TemplateCard({ template, onClick }) {
   const { name, description, muscle_groups, exercise_count, estimated_minutes } = template;
 
   return (
-    <article style={styles.card}>
+    <article style={styles.card} onClick={onClick}>
       <h2 style={styles.name}>{name}</h2>
       <p style={styles.description}>{description}</p>
 
