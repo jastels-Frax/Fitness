@@ -121,6 +121,11 @@ app.post('/api/sessions', (req, res) => {
   res.json({ id: save() });
 });
 
+app.delete('/api/sessions/all', (req, res) => {
+  db.prepare('DELETE FROM sessions').run();
+  res.json({ ok: true });
+});
+
 app.delete('/api/sessions/:id', (req, res) => {
   const { changes } = db.prepare('DELETE FROM sessions WHERE id = ?').run(req.params.id);
   if (changes === 0) return res.status(404).json({ error: 'Not found' });

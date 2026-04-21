@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import TemplateCard from '../components/TemplateCard';
 import useWorkoutStore from '../store/workoutStore';
 
+
 export default function Home() {
   const navigate = useNavigate();
   const startSession = useWorkoutStore((s) => s.startSession);
@@ -37,14 +38,7 @@ export default function Home() {
   return (
     <div style={styles.page}>
       <header style={styles.header}>
-        <div style={styles.headerRow}>
-          <h1 style={styles.wordmark}>PUSH</h1>
-          <div style={styles.navLinks}>
-            <button style={styles.navLink} onClick={() => navigate('/metrics')}>Metrics</button>
-            <button style={styles.navLink} onClick={() => navigate('/history')}>History</button>
-            <button style={styles.navLink} onClick={() => navigate('/library')}>Library →</button>
-          </div>
-        </div>
+        <h1 style={styles.wordmark}>PUSH</h1>
         <p style={styles.subtitle}>Choose your session</p>
       </header>
 
@@ -78,27 +72,6 @@ const styles = {
     margin: '0 auto',
   },
   header: { marginBottom: 48 },
-  headerRow: {
-    display: 'flex',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-  },
-  navLinks: {
-    display: 'flex',
-    gap: 20,
-    alignItems: 'flex-end',
-    marginBottom: 4,
-  },
-  navLink: {
-    fontFamily: 'var(--font-mono)',
-    fontSize: 12,
-    color: 'var(--text-muted)',
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    padding: 0,
-    letterSpacing: '0.04em',
-  },
   wordmark: {
     fontFamily: 'var(--font-display)',
     fontSize: 72,

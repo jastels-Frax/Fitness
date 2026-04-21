@@ -1,16 +1,45 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import useWorkoutStore from '../store/workoutStore';
+
+function playChime() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.7);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.7);
+    ctx.close();
+  } catch {
+    // audio not available
+  }
+}
 
 export default function RestTimerBanner() {
   const { restTimer, cancelRestTimer } = useWorkoutStore();
   const [remaining, setRemaining] = useState(0);
+  const chimed = useRef(false);
 
   useEffect(() => {
-    if (!restTimer) return;
+    if (!restTimer) {
+      chimed.current = false;
+      return;
+    }
     const tick = () => {
       const rem = Math.max(0, Math.ceil((restTimer.endsAt - Date.now()) / 1000));
       setRemaining(rem);
-      if (rem === 0) cancelRestTimer();
+      if (rem === 0) {
+        if (!chimed.current) {
+          chimed.current = true;
+          playChime();
+        }
+        cancelRestTimer();
+      }
     };
     tick();
     const id = setInterval(tick, 400);

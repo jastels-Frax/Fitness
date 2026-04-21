@@ -1,23 +1,41 @@
+import { useState } from 'react';
 import useWorkoutStore from '../store/workoutStore';
+import useSettingsStore from '../store/settingsStore';
 
 const REST_OPTIONS = [
-  { label: '30s', seconds: 30 },
-  { label: '1m',  seconds: 60 },
+  { label: '30s',  seconds: 30 },
+  { label: '1m',   seconds: 60 },
   { label: '1.5m', seconds: 90 },
-  { label: '2m',  seconds: 120 },
-  { label: '3m',  seconds: 180 },
+  { label: '2m',   seconds: 120 },
+  { label: '3m',   seconds: 180 },
 ];
 
+function toLbs(val, unit) {
+  return unit === 'kg' ? val * 2.205 : val;
+}
+
+function toDisplay(lbs, unit) {
+  if (unit === 'kg') return parseFloat((lbs / 2.205).toFixed(1));
+  return lbs;
+}
+
 export default function ExerciseBlock({ exercise }) {
-  const { id, name, rep_ranges } = exercise;
+  const { id, name, rep_ranges, form_cues } = exercise;
   const { sets, weights, notes, noteOpen, toggleSet, setWeight, toggleNote, setNote, startRestTimer } =
     useWorkoutStore();
+  const { unit } = useSettingsStore();
 
   const exSets    = sets[id]     ?? [];
   const weight    = weights[id]  ?? 0;
   const note      = notes[id]    ?? '';
   const isOpen    = noteOpen[id] ?? false;
   const repTarget = rep_ranges?.hypertrophy ?? '8–12';
+
+  const [tipsOpen, setTipsOpen] = useState(false);
+  const cues = Array.isArray(form_cues) ? form_cues : [];
+
+  const displayWeight = toDisplay(weight, unit);
+  const step = unit === 'kg' ? 1.25 : 2.5;
 
   return (
     <div style={s.block}>
@@ -28,18 +46,21 @@ export default function ExerciseBlock({ exercise }) {
 
       {/* Weight stepper */}
       <div style={s.weightRow}>
-        <button style={s.stepper} onClick={() => setWeight(id, weight - 2.5)}>−</button>
+        <button style={s.stepper} onClick={() => setWeight(id, Math.max(0, weight - toLbs(step, unit)))}>−</button>
         <div style={s.weightCenter}>
           <input
             type="number"
             style={s.weightInput}
-            value={weight || ''}
+            value={displayWeight || ''}
             placeholder="0"
-            onChange={(e) => setWeight(id, parseFloat(e.target.value) || 0)}
+            onChange={(e) => {
+              const v = parseFloat(e.target.value) || 0;
+              setWeight(id, toLbs(v, unit));
+            }}
           />
-          <span style={s.unit}>lbs</span>
+          <span style={s.unit}>{unit}</span>
         </div>
-        <button style={s.stepper} onClick={() => setWeight(id, weight + 2.5)}>+</button>
+        <button style={s.stepper} onClick={() => setWeight(id, weight + toLbs(step, unit))}>+</button>
       </div>
 
       {/* Set circles */}
@@ -65,17 +86,37 @@ export default function ExerciseBlock({ exercise }) {
       </div>
 
       {/* Note toggle */}
-      <button style={s.noteToggle} onClick={() => toggleNote(id)}>
+      <button style={s.toggleBtn} onClick={() => toggleNote(id)}>
         {isOpen ? '▲ hide note' : '+ add note'}
       </button>
-      {isOpen && (
-        <textarea
-          style={s.noteArea}
-          value={note}
-          rows={2}
-          placeholder="form notes, weight feels, etc."
-          onChange={(e) => setNote(id, e.target.value)}
-        />
+      <div style={{ ...s.slideWrap, gridTemplateRows: isOpen ? '1fr' : '0fr' }}>
+        <div style={s.slideInner}>
+          <textarea
+            style={s.noteArea}
+            value={note}
+            rows={2}
+            placeholder="form notes, weight feels, etc."
+            onChange={(e) => setNote(id, e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* Form tips toggle */}
+      {cues.length > 0 && (
+        <>
+          <button style={s.toggleBtn} onClick={() => setTipsOpen((o) => !o)}>
+            {tipsOpen ? '▲ hide tips' : '▸ form tips'}
+          </button>
+          <div style={{ ...s.slideWrap, gridTemplateRows: tipsOpen ? '1fr' : '0fr' }}>
+            <div style={s.slideInner}>
+              <ul style={s.cueList}>
+                {cues.map((cue, i) => (
+                  <li key={i} style={s.cueItem}>{cue}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
@@ -191,7 +232,7 @@ const s = {
     color: 'var(--text-muted)',
     cursor: 'pointer',
   },
-  noteToggle: {
+  toggleBtn: {
     fontFamily: 'var(--font-mono)',
     fontSize: 11,
     color: 'var(--text-muted)',
@@ -201,6 +242,14 @@ const s = {
     padding: 0,
     textAlign: 'left',
     letterSpacing: '0.04em',
+  },
+  slideWrap: {
+    display: 'grid',
+    overflow: 'hidden',
+    transition: 'grid-template-rows 0.22s ease',
+  },
+  slideInner: {
+    minHeight: 0,
   },
   noteArea: {
     background: 'var(--bg)',
@@ -215,5 +264,20 @@ const s = {
     outline: 'none',
     width: '100%',
     boxSizing: 'border-box',
+  },
+  cueList: {
+    listStyle: 'none',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+    paddingBottom: 4,
+  },
+  cueItem: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: 12,
+    color: 'var(--text-dim)',
+    paddingLeft: 12,
+    borderLeft: '2px solid var(--border-hover)',
+    lineHeight: 1.5,
   },
 };
