@@ -23,15 +23,16 @@ export function getExercise(id) {
 export function getTemplates() {
   return Promise.resolve(
     TEMPLATES.map((t) => {
-      const exs = t.exercise_ids.map((id) => exMap[id]).filter(Boolean);
+      const exs = t.exercises.map(({ exercise_id }) => exMap[exercise_id]).filter(Boolean);
       const muscle_groups = [...new Set(exs.map((e) => e.muscle_group))];
       return {
-        id: t.id,
-        name: t.name,
-        description: t.description,
+        id:                t.id,
+        name:              t.name,
+        group:             t.group,
+        description:       t.description,
         muscle_groups,
-        exercise_count: t.exercise_ids.length,
-        estimated_minutes: t.exercise_ids.length * 10,
+        exercise_count:    t.exercises.length,
+        estimated_minutes: t.exercises.length * 10,
       };
     })
   );
@@ -40,7 +41,13 @@ export function getTemplates() {
 export function getTemplate(id) {
   const t = tmMap[Number(id)];
   if (!t) return Promise.reject(new Error('Template not found'));
-  const exercises = t.exercise_ids.map((eid) => exMap[eid]).filter(Boolean);
+  const exercises = t.exercises
+    .map(({ exercise_id, num_sets, reps_target }) => {
+      const ex = exMap[exercise_id];
+      if (!ex) return null;
+      return { ...ex, num_sets, reps_target };
+    })
+    .filter(Boolean);
   return Promise.resolve({ ...t, exercises });
 }
 
@@ -64,7 +71,7 @@ export function saveSession(data) {
   addSession({
     id,
     template_id:          data.template_id ?? null,
-    template_name:        tmpl?.name ?? 'Custom Workout',
+    template_name:        data.template_name ?? tmpl?.name ?? 'Custom Workout',
     date:                 new Date().toISOString().slice(0, 10),
     notes:                data.notes ?? null,
     completed_at:         new Date().toISOString(),

@@ -23,6 +23,7 @@ export default function EndWorkoutModal({ elapsed, setsCompleted, totalSets, onC
     try {
       await saveSession({
         template_id:          template.id,
+        template_name:        template.name,
         notes:                sessionNote,
         duration_seconds:     elapsed,
         started_at:           new Date(Date.now() - elapsed * 1000).toISOString(),

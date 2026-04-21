@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import useWorkoutStore from '../store/workoutStore';
 import useSettingsStore from '../store/settingsStore';
+import ExercisePicker from './ExercisePicker';
 
 const REST_OPTIONS = [
   { label: '30s',  seconds: 30 },
@@ -20,28 +21,38 @@ function toDisplay(lbs, unit) {
 }
 
 export default function ExerciseBlock({ exercise }) {
-  const { id, name, rep_ranges, form_cues } = exercise;
-  const { sets, weights, notes, noteOpen, toggleSet, setWeight, toggleNote, setNote, startRestTimer } =
-    useWorkoutStore();
+  const { id, name, rep_ranges, form_cues, muscle_group } = exercise;
+  const {
+    sets, weights, notes, noteOpen,
+    toggleSet, setWeight, toggleNote, setNote, startRestTimer, swapExercise,
+  } = useWorkoutStore();
   const { unit } = useSettingsStore();
 
-  const exSets    = sets[id]     ?? [];
-  const weight    = weights[id]  ?? 0;
-  const note      = notes[id]    ?? '';
-  const isOpen    = noteOpen[id] ?? false;
-  const repTarget = rep_ranges?.hypertrophy ?? '8–12';
-
   const [tipsOpen, setTipsOpen] = useState(false);
-  const cues = Array.isArray(form_cues) ? form_cues : [];
+  const [showSwap, setShowSwap] = useState(false);
 
+  const exSets     = sets[id]     ?? [];
+  const weight     = weights[id]  ?? 0;
+  const note       = notes[id]    ?? '';
+  const isOpen     = noteOpen[id] ?? false;
+  const repTarget  = exercise.reps_target ?? rep_ranges?.hypertrophy ?? '8–12';
+  const cues       = Array.isArray(form_cues) ? form_cues : [];
   const displayWeight = toDisplay(weight, unit);
-  const step = unit === 'kg' ? 1.25 : 2.5;
+  const step       = unit === 'kg' ? 1.25 : 2.5;
+
+  const handleSwap = (newExercise) => {
+    swapExercise(id, { ...newExercise, num_sets: exSets.length, reps_target: repTarget });
+    setShowSwap(false);
+  };
 
   return (
     <div style={s.block}>
       <div style={s.header}>
         <h3 style={s.name}>{name}</h3>
-        <span style={s.target}>{repTarget} reps</span>
+        <div style={s.headerRight}>
+          <span style={s.target}>{repTarget} · {exSets.length} sets</span>
+          <button style={s.swapBtn} onClick={() => setShowSwap(true)}>swap</button>
+        </div>
       </div>
 
       {/* Weight stepper */}
@@ -85,7 +96,7 @@ export default function ExerciseBlock({ exercise }) {
         ))}
       </div>
 
-      {/* Note toggle */}
+      {/* Note toggle + animated panel */}
       <button style={s.toggleBtn} onClick={() => toggleNote(id)}>
         {isOpen ? '▲ hide note' : '+ add note'}
       </button>
@@ -101,7 +112,7 @@ export default function ExerciseBlock({ exercise }) {
         </div>
       </div>
 
-      {/* Form tips toggle */}
+      {/* Form tips toggle + animated panel */}
       {cues.length > 0 && (
         <>
           <button style={s.toggleBtn} onClick={() => setTipsOpen((o) => !o)}>
@@ -117,6 +128,16 @@ export default function ExerciseBlock({ exercise }) {
             </div>
           </div>
         </>
+      )}
+
+      {/* Swap modal */}
+      {showSwap && (
+        <ExercisePicker
+          title={`Swap ${name}`}
+          initialGroup={muscle_group}
+          onSelect={handleSwap}
+          onClose={() => setShowSwap(false)}
+        />
       )}
     </div>
   );
@@ -135,7 +156,7 @@ const s = {
   header: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'baseline',
+    alignItems: 'flex-start',
     gap: 12,
   },
   name: {
@@ -144,12 +165,32 @@ const s = {
     letterSpacing: '0.03em',
     color: 'var(--text)',
     lineHeight: 1,
+    flex: 1,
+  },
+  headerRight: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: 5,
+    flexShrink: 0,
   },
   target: {
     fontFamily: 'var(--font-mono)',
     fontSize: 11,
     color: 'var(--text-muted)',
-    flexShrink: 0,
+  },
+  swapBtn: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: 10,
+    letterSpacing: '0.06em',
+    textTransform: 'uppercase',
+    color: 'var(--dot-back)',
+    background: 'none',
+    border: '1px solid var(--dot-back)',
+    borderRadius: 4,
+    padding: '2px 6px',
+    cursor: 'pointer',
+    opacity: 0.7,
   },
   weightRow: {
     display: 'flex',
@@ -196,6 +237,7 @@ const s = {
     display: 'flex',
     gap: 12,
     justifyContent: 'center',
+    flexWrap: 'wrap',
   },
   circle: {
     width: 48,
@@ -248,9 +290,7 @@ const s = {
     overflow: 'hidden',
     transition: 'grid-template-rows 0.22s ease',
   },
-  slideInner: {
-    minHeight: 0,
-  },
+  slideInner: { minHeight: 0 },
   noteArea: {
     background: 'var(--bg)',
     border: '1px solid var(--border)',

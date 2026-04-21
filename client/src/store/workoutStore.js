@@ -1,7 +1,5 @@
 import { create } from 'zustand';
 
-const SETS_PER_EXERCISE = 3;
-
 export default create((set) => ({
   template:  null,
   exercises: [],
@@ -18,17 +16,57 @@ export default create((set) => ({
       exercises,
       startedAt: null,
       restTimer: null,
-      sets:     Object.fromEntries(exercises.map((e) => [e.id, Array(SETS_PER_EXERCISE).fill(false)])),
+      sets:     Object.fromEntries(exercises.map((e) => [e.id, Array(e.num_sets ?? 3).fill(false)])),
       weights:  Object.fromEntries(exercises.map((e) => [e.id, 0])),
       notes:    Object.fromEntries(exercises.map((e) => [e.id, ''])),
       noteOpen: Object.fromEntries(exercises.map((e) => [e.id, false])),
+    }),
+
+  addExercise: (exercise) =>
+    set((s) => ({
+      exercises: [...s.exercises, exercise],
+      sets:      { ...s.sets,     [exercise.id]: Array(exercise.num_sets ?? 3).fill(false) },
+      weights:   { ...s.weights,  [exercise.id]: 0 },
+      notes:     { ...s.notes,    [exercise.id]: '' },
+      noteOpen:  { ...s.noteOpen, [exercise.id]: false },
+    })),
+
+  swapExercise: (oldId, newExercise) =>
+    set((s) => {
+      const oldSets     = s.sets[oldId]     ?? [];
+      const oldWeight   = s.weights[oldId]  ?? 0;
+      const oldNote     = s.notes[oldId]    ?? '';
+      const oldNoteOpen = s.noteOpen[oldId] ?? false;
+
+      const newSetsMap     = { ...s.sets };
+      const newWeightsMap  = { ...s.weights };
+      const newNotesMap    = { ...s.notes };
+      const newNoteOpenMap = { ...s.noteOpen };
+      delete newSetsMap[oldId];
+      delete newWeightsMap[oldId];
+      delete newNotesMap[oldId];
+      delete newNoteOpenMap[oldId];
+
+      // Carry over old tracking data, pad/trim sets to new exercise's count
+      const targetSets = newExercise.num_sets ?? 3;
+      const carriedSets = oldSets.length
+        ? [...oldSets.slice(0, targetSets), ...Array(Math.max(0, targetSets - oldSets.length)).fill(false)]
+        : Array(targetSets).fill(false);
+
+      return {
+        exercises:  s.exercises.map((ex) => (ex.id === oldId ? newExercise : ex)),
+        sets:       { ...newSetsMap,     [newExercise.id]: carriedSets },
+        weights:    { ...newWeightsMap,  [newExercise.id]: oldWeight },
+        notes:      { ...newNotesMap,    [newExercise.id]: oldNote },
+        noteOpen:   { ...newNoteOpenMap, [newExercise.id]: oldNoteOpen },
+      };
     }),
 
   toggleSet: (exId, idx) =>
     set((s) => {
       const next = s.sets[exId].map((v, i) => (i === idx ? !v : v));
       return {
-        sets: { ...s.sets, [exId]: next },
+        sets:      { ...s.sets, [exId]: next },
         startedAt: s.startedAt ?? (next[idx] ? Date.now() : null),
       };
     }),

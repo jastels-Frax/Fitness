@@ -4,6 +4,7 @@ import useWorkoutStore from '../store/workoutStore';
 import ExerciseBlock from '../components/ExerciseBlock';
 import RestTimerBanner from '../components/RestTimerBanner';
 import EndWorkoutModal from '../components/EndWorkoutModal';
+import ExercisePicker from '../components/ExercisePicker';
 
 function fmtTime(secs) {
   return `${String(Math.floor(secs / 60)).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`;
@@ -11,9 +12,10 @@ function fmtTime(secs) {
 
 export default function ActiveWorkout() {
   const navigate = useNavigate();
-  const { template, exercises, sets, startedAt } = useWorkoutStore();
-  const [showModal, setShowModal] = useState(false);
-  const [now, setNow] = useState(Date.now());
+  const { template, exercises, sets, startedAt, addExercise } = useWorkoutStore();
+  const [showModal, setShowModal]   = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
+  const [now, setNow]               = useState(Date.now());
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -29,11 +31,16 @@ export default function ActiveWorkout() {
     );
   }
 
-  const allSets      = Object.values(sets).flat();
-  const totalSets    = allSets.length;
-  const doneSets     = allSets.filter(Boolean).length;
-  const progress     = totalSets > 0 ? doneSets / totalSets : 0;
-  const elapsed      = startedAt ? Math.floor((now - startedAt) / 1000) : 0;
+  const allSets   = Object.values(sets).flat();
+  const totalSets = allSets.length;
+  const doneSets  = allSets.filter(Boolean).length;
+  const progress  = totalSets > 0 ? doneSets / totalSets : 0;
+  const elapsed   = startedAt ? Math.floor((now - startedAt) / 1000) : 0;
+
+  const handleAddExercise = (ex) => {
+    addExercise({ ...ex, num_sets: ex.num_sets ?? 3, reps_target: ex.reps_target ?? ex.rep_ranges?.hypertrophy ?? '8–12' });
+    setShowPicker(false);
+  };
 
   return (
     <>
@@ -66,6 +73,10 @@ export default function ActiveWorkout() {
             <ExerciseBlock key={ex.id} exercise={ex} />
           ))}
         </div>
+
+        <button style={s.addExBtn} onClick={() => setShowPicker(true)}>
+          + ADD EXERCISE
+        </button>
       </div>
 
       {/* Fixed bottom: rest banner + end button */}
@@ -82,6 +93,14 @@ export default function ActiveWorkout() {
           setsCompleted={doneSets}
           totalSets={totalSets}
           onClose={() => setShowModal(false)}
+        />
+      )}
+
+      {showPicker && (
+        <ExercisePicker
+          title="Add to Workout"
+          onSelect={handleAddExercise}
+          onClose={() => setShowPicker(false)}
         />
       )}
     </>
@@ -104,7 +123,7 @@ const s = {
   page: {
     maxWidth: 680,
     margin: '0 auto',
-    padding: '3px 20px 180px',
+    padding: '3px 20px 200px',
   },
   header: {
     display: 'flex',
@@ -147,9 +166,7 @@ const s = {
     lineHeight: 1,
     transition: 'color 0.3s',
   },
-  timerActive: {
-    color: '#22c55e',
-  },
+  timerActive: { color: '#22c55e' },
   timerLabel: {
     fontFamily: 'var(--font-mono)',
     fontSize: 10,
@@ -157,9 +174,7 @@ const s = {
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
   },
-  setsBar: {
-    marginBottom: 24,
-  },
+  setsBar: { marginBottom: 24 },
   setsText: {
     fontFamily: 'var(--font-mono)',
     fontSize: 11,
@@ -170,6 +185,20 @@ const s = {
     display: 'flex',
     flexDirection: 'column',
     gap: 14,
+  },
+  addExBtn: {
+    display: 'block',
+    width: '100%',
+    fontFamily: 'var(--font-mono)',
+    fontSize: 12,
+    letterSpacing: '0.08em',
+    color: 'var(--text-muted)',
+    background: 'none',
+    border: '1px dashed var(--border)',
+    borderRadius: 10,
+    padding: '14px 0',
+    cursor: 'pointer',
+    marginTop: 14,
   },
   bottom: {
     position: 'fixed',
