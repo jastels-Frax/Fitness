@@ -40,6 +40,7 @@ export default function Home() {
         <div style={styles.headerRow}>
           <h1 style={styles.wordmark}>PUSH</h1>
           <div style={styles.navLinks}>
+            <button style={styles.navLink} onClick={() => navigate('/metrics')}>Metrics</button>
             <button style={styles.navLink} onClick={() => navigate('/history')}>History</button>
             <button style={styles.navLink} onClick={() => navigate('/library')}>Library →</button>
           </div>

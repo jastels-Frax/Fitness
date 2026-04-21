@@ -127,6 +127,75 @@ app.delete('/api/sessions/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+app.get('/api/metrics/exercise/:id', (req, res) => {
+  const exercise = db
+    .prepare('SELECT id, name, muscle_group FROM exercises WHERE id = ?')
+    .get(req.params.id);
+  if (!exercise) return res.status(404).json({ error: 'Not found' });
+
+  const rows = db.prepare(`
+    SELECT s.date, s.completed_at, se.weight, se.sets_data
+    FROM session_exercises se
+    JOIN sessions s ON se.session_id = s.id
+    WHERE se.exercise_id = ?
+    ORDER BY s.completed_at ASC, s.id ASC
+  `).all(req.params.id);
+
+  const history = rows.map((row) => {
+    const sets = JSON.parse(row.sets_data || '[]');
+    const done = sets.filter(Boolean).length;
+    return { date: row.date, weight: row.weight, volume: row.weight * done, sets_done: done };
+  });
+
+  const personal_best = history.length ? Math.max(...history.map((h) => h.weight)) : 0;
+  res.json({ exercise, history, personal_best });
+});
+
+app.get('/api/metrics/overview', (req, res) => {
+  const total_sessions = db.prepare('SELECT COUNT(*) AS n FROM sessions').get().n;
+
+  const allSets = db.prepare('SELECT weight, sets_data, muscle_group FROM session_exercises').all();
+  let total_volume = 0;
+  const muscleTotals = {};
+  for (const row of allSets) {
+    const done = JSON.parse(row.sets_data || '[]').filter(Boolean).length;
+    total_volume += row.weight * done;
+    if (row.muscle_group) muscleTotals[row.muscle_group] = (muscleTotals[row.muscle_group] || 0) + done;
+  }
+
+  const most_trained_muscle =
+    Object.entries(muscleTotals).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+
+  const dates = db
+    .prepare("SELECT DISTINCT date FROM sessions WHERE date IS NOT NULL ORDER BY date DESC")
+    .all()
+    .map((r) => r.date);
+
+  let current_streak = 0;
+  if (dates.length) {
+    const today     = new Date().toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+    const dateSet   = new Set(dates);
+    let cursor = dateSet.has(today) ? today : dateSet.has(yesterday) ? yesterday : null;
+    if (cursor) {
+      current_streak = 1;
+      let d = new Date(cursor);
+      d.setDate(d.getDate() - 1);
+      while (dateSet.has(d.toISOString().slice(0, 10))) {
+        current_streak++;
+        d.setDate(d.getDate() - 1);
+      }
+    }
+  }
+
+  res.json({
+    total_sessions,
+    total_volume: Math.round(total_volume),
+    most_trained_muscle,
+    current_streak,
+  });
+});
+
 app.get('/api/templates', (req, res) => {
   const templates = db.prepare('SELECT * FROM workout_templates ORDER BY id').all();
 
