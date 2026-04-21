@@ -39,9 +39,10 @@ export default function Home() {
       <header style={styles.header}>
         <div style={styles.headerRow}>
           <h1 style={styles.wordmark}>PUSH</h1>
-          <button style={styles.libraryLink} onClick={() => navigate('/library')}>
-            Library →
-          </button>
+          <div style={styles.navLinks}>
+            <button style={styles.navLink} onClick={() => navigate('/history')}>History</button>
+            <button style={styles.navLink} onClick={() => navigate('/library')}>Library →</button>
+          </div>
         </div>
         <p style={styles.subtitle}>Choose your session</p>
       </header>
@@ -81,7 +82,13 @@ const styles = {
     alignItems: 'flex-end',
     justifyContent: 'space-between',
   },
-  libraryLink: {
+  navLinks: {
+    display: 'flex',
+    gap: 20,
+    alignItems: 'flex-end',
+    marginBottom: 4,
+  },
+  navLink: {
     fontFamily: 'var(--font-mono)',
     fontSize: 12,
     color: 'var(--text-muted)',
@@ -90,7 +97,6 @@ const styles = {
     cursor: 'pointer',
     padding: 0,
     letterSpacing: '0.04em',
-    marginBottom: 4,
   },
   wordmark: {
     fontFamily: 'var(--font-display)',

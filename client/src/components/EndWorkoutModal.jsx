@@ -13,7 +13,7 @@ function fmtDuration(secs) {
 
 export default function EndWorkoutModal({ elapsed, setsCompleted, totalSets, onClose }) {
   const navigate = useNavigate();
-  const { template, clearSession } = useWorkoutStore();
+  const { template, exercises, sets, weights, notes, clearSession } = useWorkoutStore();
   const [sessionNote, setSessionNote] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -23,7 +23,22 @@ export default function EndWorkoutModal({ elapsed, setsCompleted, totalSets, onC
       await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ template_id: template.id, notes: sessionNote }),
+        body: JSON.stringify({
+          template_id:          template.id,
+          notes:                sessionNote,
+          duration_seconds:     elapsed,
+          started_at:           new Date(Date.now() - elapsed * 1000).toISOString(),
+          total_sets:           totalSets,
+          total_sets_completed: setsCompleted,
+          exercises: exercises.map((ex) => ({
+            exercise_id:   ex.id,
+            exercise_name: ex.name,
+            muscle_group:  ex.muscle_group,
+            weight:        weights[ex.id] ?? 0,
+            note:          notes[ex.id] ?? '',
+            sets:          sets[ex.id] ?? [],
+          })),
+        }),
       });
     } catch {}
     clearSession();

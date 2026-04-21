@@ -58,12 +58,73 @@ app.get('/api/templates/:id', (req, res) => {
   res.json({ ...tmpl, exercises: exerciseIds.map((id) => exerciseMap[id]).filter(Boolean) });
 });
 
+app.get('/api/sessions', (req, res) => {
+  const rows = db.prepare(`
+    SELECT s.id, s.date, s.notes, s.completed_at, s.started_at,
+           s.duration_seconds, s.total_sets, s.total_sets_completed,
+           COALESCE(wt.name, 'Custom Workout') AS template_name
+    FROM sessions s
+    LEFT JOIN workout_templates wt ON s.template_id = wt.id
+    ORDER BY s.id DESC
+  `).all();
+  res.json(rows);
+});
+
+app.get('/api/sessions/:id', (req, res) => {
+  const session = db.prepare(`
+    SELECT s.*, COALESCE(wt.name, 'Custom Workout') AS template_name
+    FROM sessions s
+    LEFT JOIN workout_templates wt ON s.template_id = wt.id
+    WHERE s.id = ?
+  `).get(req.params.id);
+  if (!session) return res.status(404).json({ error: 'Not found' });
+
+  const exercises = db
+    .prepare('SELECT * FROM session_exercises WHERE session_id = ? ORDER BY id')
+    .all(req.params.id)
+    .map((e) => ({ ...e, sets_data: JSON.parse(e.sets_data) }));
+
+  res.json({ ...session, exercises });
+});
+
 app.post('/api/sessions', (req, res) => {
-  const { template_id, notes } = req.body;
-  const result = db
-    .prepare('INSERT INTO sessions (template_id, notes, completed_at) VALUES (?, ?, ?)')
-    .run(template_id ?? null, notes ?? null, new Date().toISOString());
-  res.json({ id: result.lastInsertRowid });
+  const {
+    template_id, notes, started_at, duration_seconds,
+    total_sets, total_sets_completed, exercises = [],
+  } = req.body;
+
+  const save = db.transaction(() => {
+    const { lastInsertRowid: sessionId } = db.prepare(`
+      INSERT INTO sessions
+        (template_id, notes, completed_at, started_at, duration_seconds, total_sets, total_sets_completed)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      template_id ?? null, notes ?? null, new Date().toISOString(),
+      started_at ?? null, duration_seconds ?? null,
+      total_sets ?? null, total_sets_completed ?? null,
+    );
+
+    const insertEx = db.prepare(`
+      INSERT INTO session_exercises (session_id, exercise_id, exercise_name, muscle_group, weight, note, sets_data)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+    for (const ex of exercises) {
+      insertEx.run(
+        sessionId, ex.exercise_id ?? null, ex.exercise_name,
+        ex.muscle_group ?? null, ex.weight ?? 0,
+        ex.note || null, JSON.stringify(ex.sets ?? []),
+      );
+    }
+    return sessionId;
+  });
+
+  res.json({ id: save() });
+});
+
+app.delete('/api/sessions/:id', (req, res) => {
+  const { changes } = db.prepare('DELETE FROM sessions WHERE id = ?').run(req.params.id);
+  if (changes === 0) return res.status(404).json({ error: 'Not found' });
+  res.json({ ok: true });
 });
 
 app.get('/api/templates', (req, res) => {

@@ -30,13 +30,39 @@ db.exec(`
   );
 
   CREATE TABLE IF NOT EXISTS sessions (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    template_id INTEGER REFERENCES workout_templates(id),
-    date        TEXT    NOT NULL DEFAULT (date('now')),
-    notes       TEXT,
-    completed_at TEXT
+    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+    template_id          INTEGER REFERENCES workout_templates(id),
+    date                 TEXT    NOT NULL DEFAULT (date('now')),
+    notes                TEXT,
+    completed_at         TEXT,
+    started_at           TEXT,
+    duration_seconds     INTEGER,
+    total_sets           INTEGER,
+    total_sets_completed INTEGER
+  );
+
+  CREATE TABLE IF NOT EXISTS session_exercises (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id    INTEGER NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    exercise_id   INTEGER REFERENCES exercises(id),
+    exercise_name TEXT    NOT NULL,
+    muscle_group  TEXT,
+    weight        REAL    NOT NULL DEFAULT 0,
+    note          TEXT,
+    sets_data     TEXT    NOT NULL DEFAULT '[]'
   );
 `);
+
+// Migrate existing sessions table if columns are absent
+const sessionCols = db.prepare('PRAGMA table_info(sessions)').all().map((c) => c.name);
+const addCol = (col, type) => {
+  if (!sessionCols.includes(col))
+    db.exec(`ALTER TABLE sessions ADD COLUMN ${col} ${type}`);
+};
+addCol('started_at',           'TEXT');
+addCol('duration_seconds',     'INTEGER');
+addCol('total_sets',           'INTEGER');
+addCol('total_sets_completed', 'INTEGER');
 
 // ── Seed helpers ─────────────────────────────────────────────────────────────
 
